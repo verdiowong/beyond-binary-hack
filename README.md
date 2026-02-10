@@ -4,6 +4,8 @@ This repository now contains a native Android Kotlin skeleton for an emergency r
 
 This documentation is focused on the native Android implementation under `app/src/main/` and intentionally ignores `frontend/sos-assist` for now.
 
+Run/setup guide: `docs/run-native-android.md`
+
 ## Project Goal
 
 Build a state-driven emergency workflow with a centralized `EmergencyViewModel` that coordinates UI, sensors, voice/vision, location, and dispatch.
