@@ -1,14 +1,11 @@
 package com.example.emergencyresponse
 
-import android.Manifest
 import android.content.Context
-import android.content.pm.PackageManager
-import android.telephony.SmsManager
-import androidx.core.content.ContextCompat
 
 class DispatchBridge(private val context: Context) {
     companion object {
-        private const val SCDF_NUMBER = "70995"
+        // private const val SCDF_NUMBER = "70995" // Real emergency number - keep commented in mock mode.
+        private const val MOCK_DISPATCH_MODE = true
     }
 
     // Member 5 TODO: Build the SCDF 70995 string formatter.
@@ -28,14 +25,6 @@ class DispatchBridge(private val context: Context) {
         event: EmergencyEvent,
         onComplete: (Boolean, String) -> Unit
     ) {
-        if (
-            ContextCompat.checkSelfPermission(context, Manifest.permission.SEND_SMS)
-            != PackageManager.PERMISSION_GRANTED
-        ) {
-            onComplete(false, "Missing SEND_SMS permission.")
-            return
-        }
-
         val message = formatScdfMessage(
             service = event.serviceType.ifBlank { "Ambulance" },
             address = event.address.ifBlank { "Unknown location" },
@@ -43,19 +32,25 @@ class DispatchBridge(private val context: Context) {
             contextText = event.context.ifBlank { "No context" }
         )
 
-        try {
-            val smsManager = SmsManager.getDefault()
-            smsManager.sendTextMessage(SCDF_NUMBER, null, message, null, null)
-            smsManager.sendTextMessage(
-                event.caregiverNumber.ifBlank { "91234567" },
-                null,
-                message,
-                null,
-                null
+        if (MOCK_DISPATCH_MODE) {
+            onComplete(
+                true,
+                "MOCK dispatch only. No real SMS sent. Payload: $message"
             )
-            onComplete(true, "SMS sent to SCDF and caregiver.")
-        } catch (ex: Exception) {
-            onComplete(false, "SMS dispatch failed: ${ex.message}")
+            return
         }
+
+        // Real SMS flow (disabled for now in mock mode):
+        // val smsManager = SmsManager.getDefault()
+        // smsManager.sendTextMessage(SCDF_NUMBER, null, message, null, null)
+        // smsManager.sendTextMessage(
+        //     event.caregiverNumber.ifBlank { "91234567" },
+        //     null,
+        //     message,
+        //     null,
+        //     null
+        // )
+        // onComplete(true, "SMS sent to SCDF and caregiver.")
+        onComplete(false, "Real SMS dispatch disabled in current build.")
     }
 }
