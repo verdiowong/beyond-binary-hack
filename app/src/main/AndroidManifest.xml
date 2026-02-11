@@ -46,6 +46,14 @@
             android:name=".ui.MedicalCardActivity"
             android:exported="false" />
 
+        <activity
+            android:name=".ui.BystanderCardsActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".ui.BystanderCardDetailActivity"
+            android:exported="false" />
+
         <service
             android:name=".service.FallDetectionService"
             android:exported="false"

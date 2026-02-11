@@ -7,6 +7,10 @@ android {
     namespace = "com.example.emergencyresponse"
     compileSdk = 34
 
+    buildFeatures {
+        buildConfig = true
+    }
+
     defaultConfig {
         applicationId = "com.example.emergencyresponse"
         minSdk = 26
@@ -15,6 +19,15 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // Read OpenAI API key from project-level gradle.properties.
+        // Example entry: OPENAI_API_KEY=sk-xxxx
+        val openAiKey = (project.findProperty("OPENAI_API_KEY") as? String).orEmpty()
+        buildConfigField(
+            "String",
+            "OPENAI_API_KEY",
+            "\"$openAiKey\""
+        )
     }
 
     buildTypes {
@@ -28,12 +41,12 @@ android {
     }
     
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
     
     kotlinOptions {
-        jvmTarget = "1.8"
+        jvmTarget = "17"
     }
 
     testOptions {

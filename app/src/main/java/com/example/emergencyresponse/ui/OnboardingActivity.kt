@@ -40,7 +40,9 @@ class OnboardingActivity : AppCompatActivity() {
 
     // Step 4
     private lateinit var inputMedical: TextInputEditText
+    private lateinit var inputBloodType: TextInputEditText
     private lateinit var inputAllergies: TextInputEditText
+    private lateinit var inputMedications: TextInputEditText
     private lateinit var inputMedicalId: TextInputEditText
 
     private val totalSteps = 5
@@ -67,7 +69,9 @@ class OnboardingActivity : AppCompatActivity() {
         inputSecondary = findViewById(R.id.inputSecondary)
 
         inputMedical = findViewById(R.id.inputMedical)
+        inputBloodType = findViewById(R.id.inputBloodType)
         inputAllergies = findViewById(R.id.inputAllergies)
+        inputMedications = findViewById(R.id.inputMedications)
         inputMedicalId = findViewById(R.id.inputMedicalId)
 
         // Pre-fill from any existing profile data
@@ -101,7 +105,9 @@ class OnboardingActivity : AppCompatActivity() {
         inputCaregiver.setText(profile.caregiverNumber)
         inputSecondary.setText(profile.secondaryContact)
         inputMedical.setText(profile.medicalConditions)
+        inputBloodType.setText(profile.bloodType)
         inputAllergies.setText(profile.allergies)
+        inputMedications.setText(profile.medications)
         inputMedicalId.setText(profile.medicalId)
         when (profile.communicationMode) {
             UserProfile.COMM_MODE_VOICE -> commModeGroup.check(R.id.radioVoice)
@@ -162,7 +168,9 @@ class OnboardingActivity : AppCompatActivity() {
             caregiverNumber = inputCaregiver.text?.toString()?.trim() ?: "",
             secondaryContact = inputSecondary.text?.toString()?.trim() ?: "",
             medicalConditions = inputMedical.text?.toString()?.trim() ?: "",
+            bloodType = inputBloodType.text?.toString()?.trim() ?: "",
             allergies = inputAllergies.text?.toString()?.trim() ?: "",
+            medications = inputMedications.text?.toString()?.trim() ?: "",
             medicalId = inputMedicalId.text?.toString()?.trim() ?: "",
             communicationMode = commMode
         )

@@ -19,7 +19,9 @@ class UserProfileRepository(context: Context) {
         private const val KEY_CAREGIVER_NUMBER = "caregiver_number"
         private const val KEY_SECONDARY_CONTACT = "secondary_contact"
         private const val KEY_MEDICAL_CONDITIONS = "medical_conditions"
+        private const val KEY_BLOOD_TYPE = "blood_type"
         private const val KEY_ALLERGIES = "allergies"
+        private const val KEY_MEDICATIONS = "medications"
         private const val KEY_MEDICAL_ID = "medical_id"
         private const val KEY_COMMUNICATION_MODE = "communication_mode"
     }
@@ -40,7 +42,9 @@ class UserProfileRepository(context: Context) {
             .putString(KEY_CAREGIVER_NUMBER, profile.caregiverNumber)
             .putString(KEY_SECONDARY_CONTACT, profile.secondaryContact)
             .putString(KEY_MEDICAL_CONDITIONS, profile.medicalConditions)
+            .putString(KEY_BLOOD_TYPE, profile.bloodType)
             .putString(KEY_ALLERGIES, profile.allergies)
+            .putString(KEY_MEDICATIONS, profile.medications)
             .putString(KEY_MEDICAL_ID, profile.medicalId)
             .putString(KEY_COMMUNICATION_MODE, profile.communicationMode)
             .apply()
@@ -55,7 +59,9 @@ class UserProfileRepository(context: Context) {
             caregiverNumber = prefs.getString(KEY_CAREGIVER_NUMBER, "") ?: "",
             secondaryContact = prefs.getString(KEY_SECONDARY_CONTACT, "") ?: "",
             medicalConditions = prefs.getString(KEY_MEDICAL_CONDITIONS, "") ?: "",
+            bloodType = prefs.getString(KEY_BLOOD_TYPE, "") ?: "",
             allergies = prefs.getString(KEY_ALLERGIES, "") ?: "",
+            medications = prefs.getString(KEY_MEDICATIONS, "") ?: "",
             medicalId = prefs.getString(KEY_MEDICAL_ID, "") ?: "",
             communicationMode = prefs.getString(KEY_COMMUNICATION_MODE, UserProfile.COMM_MODE_TOUCH)
                 ?: UserProfile.COMM_MODE_TOUCH
