@@ -4,6 +4,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.os.Build
 import android.os.Bundle
 import android.os.CountDownTimer
 import android.view.KeyEvent
@@ -160,10 +161,12 @@ class MainActivity : AppCompatActivity() {
         super.onStart()
         startService(Intent(this, FallDetectionService::class.java))
         if (!isFallReceiverRegistered) {
-            registerReceiver(
-                fallReceiver,
-                IntentFilter(FallDetectionService.ACTION_FALL_DETECTED)
-            )
+            val filter = IntentFilter(FallDetectionService.ACTION_FALL_DETECTED)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                registerReceiver(fallReceiver, filter, RECEIVER_NOT_EXPORTED)
+            } else {
+                registerReceiver(fallReceiver, filter)
+            }
             isFallReceiverRegistered = true
         }
     }
