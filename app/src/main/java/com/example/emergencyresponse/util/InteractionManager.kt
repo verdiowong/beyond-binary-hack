@@ -2,6 +2,7 @@ package com.example.emergencyresponse.util
 
 import android.content.Context
 import android.content.Intent
+import android.media.AudioManager
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
@@ -36,6 +37,10 @@ class InteractionManager(private val context: Context) {
     }
 
     private val mainHandler = Handler(Looper.getMainLooper())
+    private val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+
+    /** Saved music stream volume, restored after TTS finishes. */
+    private var savedMusicVolume: Int = -1
 
     // ── TTS ─────────────────────────────────────────────────────────────────
 
@@ -84,10 +89,14 @@ class InteractionManager(private val context: Context) {
                 tts?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
                     override fun onStart(utteranceId: String?) {
                         Log.d(TAG, "TTS started: $utteranceId")
+                        // Duck the music/TTS stream volume so STT (if running
+                        // in parallel) is less likely to pick up speaker echo.
+                        duckVolume()
                     }
 
                     override fun onDone(utteranceId: String?) {
                         Log.d(TAG, "TTS done: $utteranceId (waiting for: $lastExpectedUtterance)")
+                        restoreVolume()
                         // Only fire pending STT when the LAST expected utterance finishes
                         if (utteranceId == lastExpectedUtterance) {
                             mainHandler.post {
@@ -100,6 +109,7 @@ class InteractionManager(private val context: Context) {
                     @Deprecated("Deprecated in Java")
                     override fun onError(utteranceId: String?) {
                         Log.w(TAG, "TTS error: $utteranceId")
+                        restoreVolume()
                         if (utteranceId == lastExpectedUtterance) {
                             mainHandler.post {
                                 pendingSttStart?.invoke()
@@ -191,6 +201,17 @@ class InteractionManager(private val context: Context) {
             }, 500)
         }
         // Otherwise, the UtteranceProgressListener.onDone will trigger it
+    }
+
+    /**
+     * Start STT **immediately** without waiting for TTS to finish.
+     * Use this for time-critical states (e.g. DROP_COUNTDOWN) where the user
+     * needs to be able to speak right away. Volume ducking in the TTS
+     * UtteranceProgressListener reduces echo pickup from the speaker.
+     */
+    fun startListeningImmediately(keywords: Map<String, String>, onMatch: (String) -> Unit) {
+        pendingSttStart = null  // cancel any pending deferred start
+        startListeningNow(keywords, onMatch)
     }
 
     /**
@@ -376,6 +397,33 @@ class InteractionManager(private val context: Context) {
                     startListeningNow(currentKeywords, keywordCallback ?: return@postDelayed)
                 }
             }, 600)
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // Volume ducking — reduce speaker volume while TTS plays so parallel
+    // STT is less likely to pick up echo from the speaker output.
+    // ═══════════════════════════════════════════════════════════════════════
+
+    private fun duckVolume() {
+        try {
+            val current = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
+            if (savedMusicVolume < 0) savedMusicVolume = current
+            val ducked = (current * 0.7).toInt().coerceAtLeast(1)
+            audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, ducked, 0)
+        } catch (e: Exception) {
+            Log.w(TAG, "Volume duck failed: ${e.message}")
+        }
+    }
+
+    private fun restoreVolume() {
+        try {
+            if (savedMusicVolume >= 0) {
+                audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, savedMusicVolume, 0)
+                savedMusicVolume = -1
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Volume restore failed: ${e.message}")
         }
     }
 

@@ -191,8 +191,21 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Flexible spacer pushes buttons to the bottom -->
+            <!-- Map WebView — shown only in LOCATION_CONFIRM state -->
+            <WebView
+                android:id="@+id/mapWebView"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="3"
+                android:layout_marginStart="20dp"
+                android:layout_marginTop="12dp"
+                android:layout_marginEnd="20dp"
+                android:layout_marginBottom="12dp"
+                android:visibility="gone" />
+
+            <!-- Flexible spacer pushes buttons to the bottom (hidden when map is visible) -->
             <View
+                android:id="@+id/flexSpacer"
                 android:layout_width="0dp"
                 android:layout_height="0dp"
                 android:layout_weight="1" />

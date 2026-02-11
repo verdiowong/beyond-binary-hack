@@ -46,11 +46,11 @@ class FallDetectionService : Service(), SensorEventListener {
 
         // Tremor pipeline.
         private const val TREMOR_WINDOW_MS = 3000L
-        private const val TREMOR_MIN_RMS = 1.15f
-        private const val TREMOR_MIN_ZERO_CROSS = 14
+        private const val TREMOR_MIN_RMS = 2.0f
+        private const val TREMOR_MIN_ZERO_CROSS = 18
         private const val TREMOR_MAX_ZERO_CROSS = 85
         private const val TREMOR_MIN_ACTIVE_SAMPLES = 50
-        private const val TREMOR_SUSTAINED_WINDOWS = 3
+        private const val TREMOR_SUSTAINED_WINDOWS = 5
 
         // Noise suppression filters.
         private const val LPF_ALPHA_MAG = 0.18f
@@ -259,6 +259,24 @@ class FallDetectionService : Service(), SensorEventListener {
             putExtra(EXTRA_TRIGGER_TYPE, triggerType)
         }
         sendBroadcast(broadcast)
+
+        // Attempt to launch MainActivity directly so the countdown screen
+        // pops up immediately, instead of relying solely on the notification.
+        // Wrapped in try-catch because some OEMs / Android 12+ may block
+        // background activity starts; the notification below is the fallback.
+        try {
+            val launchIntent = Intent(this, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or
+                    Intent.FLAG_ACTIVITY_SINGLE_TOP or
+                    Intent.FLAG_ACTIVITY_CLEAR_TOP
+                putExtra(EXTRA_START_DROP_COUNTDOWN, true)
+                putExtra(EXTRA_START_SOURCE, triggerType)
+            }
+            startActivity(launchIntent)
+            Log.i(TAG, "Direct activity launch succeeded for trigger=$triggerType")
+        } catch (e: Exception) {
+            Log.w(TAG, "Direct activity launch blocked (falling back to notification): ${e.message}")
+        }
 
         showEmergencyAlertNotification(triggerType)
     }

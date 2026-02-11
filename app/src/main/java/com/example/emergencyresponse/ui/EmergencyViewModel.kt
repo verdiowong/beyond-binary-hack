@@ -65,7 +65,7 @@ class EmergencyViewModel : ViewModel() {
     }
 
     fun onLocationResolved(address: String, latitude: Double = 0.0, longitude: Double = 0.0) {
-        _uiModel.update { it.copy(resolvedAddress = address) }
+        _uiModel.update { it.copy(resolvedAddress = address, latitude = latitude, longitude = longitude) }
         _emergencyEvent.update { it.copy(address = address, latitude = latitude, longitude = longitude) }
     }
 

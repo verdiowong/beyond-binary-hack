@@ -4,13 +4,14 @@ A native Android (Kotlin) emergency response application designed for motor-impa
 
 ## Features
 
-- **Fall & Tremor Detection** -- Background foreground service monitors the accelerometer for free-fall + impact sequences and sustained severe tremor patterns.
+- **Fall & Tremor Detection** -- Background foreground service monitors the accelerometer for free-fall + impact sequences and sustained severe tremor patterns. Tremor thresholds are tuned to avoid false positives from normal activity (walking, typing) while still catching genuine episodes.
+- **Direct Screen Pop-up** -- When a fall/tremor is detected, the app launches the countdown screen directly (not just a notification), so the user sees it immediately even if the app was in the background.
 - **Accessible Emergency Flow** -- Large touch targets, Text-to-Speech announcements, Speech-to-Text voice commands, and haptic vibration patterns for each state.
 - **Multi-step Emergency Wizard**:
-  1. **Drop Countdown** -- 10-second countdown after fall detection; user can say "help" or "okay" to escalate or cancel.
+  1. **Drop Countdown** -- 10-second countdown after fall detection; user can say "help" or "okay" to escalate or cancel. Voice input is active immediately (no waiting for TTS to finish).
   2. **Service Selection** -- Choose Fire, Ambulance, or Police with large emoji buttons or voice.
   3. **Context Selection** -- Describe what's happening (e.g. Fall, Chest Pain, Bleeding, My Unit on Fire).
-  4. **Location Confirmation** -- GPS auto-resolve with reverse geocoding; confirm before dispatch.
+  4. **Location Confirmation** -- GPS auto-resolve with reverse geocoding; interactive Google Maps WebView for visual confirmation before dispatch.
   5. **Dispatch** -- Sends formatted SMS to SCDF 70995 and caregiver/secondary contacts with Google Maps link.
 - **User Onboarding** -- Multi-step wizard collects name, address, caregiver contacts, medical info, and communication preference (touch/voice/both).
 - **Settings** -- Edit profile data at any time.
@@ -82,7 +83,9 @@ IDLE -> DROP_COUNTDOWN -> SERVICE_SELECTION -> CONTEXT_SELECTION -> LOCATION_CON
 
 - **MVVM** -- `EmergencyViewModel` owns all state; Activities observe via `StateFlow`.
 - **Foreground Service** -- `FallDetectionService` runs with `foregroundServiceType="health"` for reliable background sensor monitoring.
-- **TTS-before-STT** -- Speech recognition starts only after all TTS utterances finish, preventing microphone echo.
+- **Immediate STT for Countdown** -- During the time-critical `DROP_COUNTDOWN` state, speech recognition starts immediately (in parallel with TTS) so the user can say "help" right away. For other states, STT still waits for TTS to finish to prevent echo false-matches. Volume ducking reduces speaker bleed into the microphone.
+- **Direct Activity Launch** -- When a fall or tremor is detected, the service attempts to launch `MainActivity` directly via `startActivity()` so the countdown screen pops up immediately. This is wrapped in a try-catch because some OEMs / Android 12+ may block background activity starts; the full-screen notification remains as the fallback.
+- **Location Map** -- The location confirmation screen shows a Google Maps WebView embed so the user can visually confirm their position at a glance.
 - **Mock Dispatch** -- SMS to SCDF is mocked by default; caregiver SMS can be tested independently.
 
 ## How to Run
@@ -169,6 +172,7 @@ To go **fully mock** (no SMS at all): set both to `true` / `false` respectively,
 | `RECEIVE_BOOT_COMPLETED` | Auto-start fall detection on boot |
 | `POST_NOTIFICATIONS` | Notification channel alerts (API 33+) |
 | `USE_FULL_SCREEN_INTENT` | Full-screen emergency alert on lock screen |
+| `INTERNET` | WebView map on location confirmation page |
 
 ## Accessibility
 

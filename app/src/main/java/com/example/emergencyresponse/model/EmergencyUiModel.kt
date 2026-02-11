@@ -7,5 +7,7 @@ data class EmergencyUiModel(
     val state: EmergencyUiState = EmergencyUiState.IDLE,
     val selectedService: String? = null,
     val selectedContext: String? = null,
-    val resolvedAddress: String? = null
+    val resolvedAddress: String? = null,
+    val latitude: Double? = null,
+    val longitude: Double? = null
 )

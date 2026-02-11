@@ -17,6 +17,8 @@ import android.provider.Settings
 import android.util.Log
 import android.view.KeyEvent
 import android.view.View
+import android.webkit.WebView
+import android.webkit.WebViewClient
 import android.widget.Button
 import android.widget.TextView
 import android.widget.ViewSwitcher
@@ -60,6 +62,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var tertiaryActionButton: Button
     private lateinit var quaternaryActionButton: Button
     private lateinit var cancelButton: Button
+    private lateinit var mapWebView: WebView
+    private lateinit var flexSpacer: View
 
     /** Context options for the currently selected service (set during SERVICE_SELECTION). */
     private var activeContextOptions: List<ContextOption> = emptyList()
@@ -120,6 +124,13 @@ class MainActivity : AppCompatActivity() {
         tertiaryActionButton = findViewById(R.id.tertiaryActionButton)
         quaternaryActionButton = findViewById(R.id.quaternaryActionButton)
         cancelButton = findViewById(R.id.cancelButton)
+        mapWebView = findViewById(R.id.mapWebView)
+        flexSpacer = findViewById(R.id.flexSpacer)
+
+        // Configure WebView for Google Maps embed
+        mapWebView.settings.javaScriptEnabled = true
+        mapWebView.settings.domStorageEnabled = true
+        mapWebView.webViewClient = WebViewClient() // prevent external browser opens
 
         interactionManager = InteractionManager(this).also { it.initialize() }
         locationHandler = LocationHandler(this)
@@ -428,6 +439,13 @@ class MainActivity : AppCompatActivity() {
                 primaryActionButton.alpha = if (locationReady) 1.0f else 0.5f
                 cancelButton.contentDescription = "Cancel emergency and return to idle"
                 cancelButton.visibility = View.VISIBLE
+
+                // Show the map WebView when coordinates are available
+                if (locationReady && model.latitude != null && model.longitude != null) {
+                    showMap(model.latitude, model.longitude)
+                } else {
+                    hideMap()
+                }
             }
 
             EmergencyUiState.DISPATCH_ACTIVE -> {
@@ -457,15 +475,22 @@ class MainActivity : AppCompatActivity() {
         }
 
         // STT: start/stop voice keyword listening based on state and comm preference.
-        // IMPORTANT: uses startListeningAfterTts to avoid the microphone picking up
-        // the TTS speaker output and false-matching keywords (e.g. "okay" from TTS echo).
+        // For DROP_COUNTDOWN: start STT immediately (speed is critical in emergencies).
+        // For other states: wait for TTS to finish to avoid echo false-matches.
+        // Volume ducking in InteractionManager reduces echo when STT runs in parallel.
         val profile = profileRepo.load()
         val useVoice = profile.communicationMode != UserProfile.COMM_MODE_TOUCH
         if (useVoice) {
             val keywords = interactionManager.keywordsForState(model.state, activeContextOptions, profile.name)
             if (keywords.isNotEmpty()) {
-                interactionManager.startListeningAfterTts(keywords) { action ->
+                val callback: (String) -> Unit = { action ->
                     runOnUiThread { handleVoiceAction(model.state, action) }
+                }
+                if (model.state == EmergencyUiState.DROP_COUNTDOWN) {
+                    // Time-critical: mic opens instantly so user can say "help" right away
+                    interactionManager.startListeningImmediately(keywords, callback)
+                } else {
+                    interactionManager.startListeningAfterTts(keywords, callback)
                 }
             } else {
                 interactionManager.stopListening()
@@ -549,6 +574,39 @@ class MainActivity : AppCompatActivity() {
         secondaryActionButton.visibility = View.GONE
         tertiaryActionButton.visibility = View.GONE
         quaternaryActionButton.visibility = View.GONE
+        // Hide the map whenever options are reset; showMap() is called
+        // explicitly only in the LOCATION_CONFIRM rendering path.
+        hideMap()
+    }
+
+    /** Load Google Maps in the WebView at the resolved coordinates via an iframe embed. */
+    @android.annotation.SuppressLint("SetJavaScriptEnabled")
+    private fun showMap(lat: Double, lng: Double) {
+        mapWebView.visibility = View.VISIBLE
+        flexSpacer.visibility = View.GONE
+        val tag = "$lat,$lng"
+        // Only reload if the coordinates actually changed (avoids flicker on repeated renders)
+        if (mapWebView.tag != tag) {
+            mapWebView.tag = tag
+            val html = """
+                <!DOCTYPE html>
+                <html style="height:100%;margin:0;padding:0">
+                <head><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"></head>
+                <body style="height:100%;margin:0;padding:0">
+                <iframe src="https://maps.google.com/maps?q=$lat,$lng&z=17&output=embed"
+                        style="width:100%;height:100%;border:0;border-radius:12px"
+                        allowfullscreen loading="eager"></iframe>
+                </body></html>
+            """.trimIndent()
+            mapWebView.loadDataWithBaseURL("https://maps.google.com", html, "text/html", "UTF-8", null)
+        }
+    }
+
+    /** Hide the map and restore the flexible spacer. */
+    private fun hideMap() {
+        mapWebView.visibility = View.GONE
+        flexSpacer.visibility = View.VISIBLE
+        mapWebView.tag = null
     }
 
     private fun startCountdownIfNeeded() {
