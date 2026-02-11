@@ -1,8 +1,3 @@
-# Existing project ignores
-.vscode/
-.env
-brief.md
-
 # Android / Gradle
 **/build/
 **/.gradle/
@@ -24,9 +19,17 @@ replay_pid*
 # OS files
 .DS_Store
 Thumbs.db
+desktop.ini
 
 # Environment / secrets
+.env
 .env.*
 *.keystore
 *.jks
 google-services.json
+
+# Editor
+.vscode/
+
+# Misc
+brief.md
