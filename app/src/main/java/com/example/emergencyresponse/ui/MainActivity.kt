@@ -58,6 +58,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var stateSwitcher: ViewSwitcher
     private lateinit var stateCard: MaterialCardView
     private lateinit var idleTriggerButton: Button
+    private lateinit var bystanderIdleButton: Button
     private lateinit var titleText: TextView
     private lateinit var subtitleText: TextView
     private lateinit var primaryActionButton: Button
@@ -127,6 +128,7 @@ class MainActivity : AppCompatActivity() {
         stateSwitcher = findViewById(R.id.stateSwitcher)
         stateCard = findViewById(R.id.stateCard)
         idleTriggerButton = findViewById(R.id.idleTriggerButton)
+        bystanderIdleButton = findViewById(R.id.bystanderIdleButton)
         titleText = findViewById(R.id.titleText)
         subtitleText = findViewById(R.id.subtitleText)
         primaryActionButton = findViewById(R.id.primaryActionButton)
@@ -146,6 +148,11 @@ class MainActivity : AppCompatActivity() {
         // Shout button: toggle loud TTS help message
         initShoutTts()
         shoutButton.setOnClickListener { toggleShout() }
+
+        bystanderIdleButton.setOnClickListener {
+            // Open the bystander cards screen — it handles its own loading
+            startActivity(Intent(this, BystanderCardsActivity::class.java))
+        }
 
         interactionManager = InteractionManager(this).also { it.initialize() }
         locationHandler = LocationHandler(this)
@@ -348,7 +355,9 @@ class MainActivity : AppCompatActivity() {
                 val enrichedContext = buildList {
                     add(baseEvent.context)
                     if (profile.medicalConditions.isNotBlank()) add("Medical: ${profile.medicalConditions}")
+                    if (profile.bloodType.isNotBlank()) add("Blood type: ${profile.bloodType}")
                     if (profile.allergies.isNotBlank()) add("Allergies: ${profile.allergies}")
+                    if (profile.medications.isNotBlank()) add("Medications: ${profile.medications}")
                     if (profile.medicalId.isNotBlank()) add("ID: ${profile.medicalId}")
                 }.filter { it.isNotBlank() }.joinToString(". ")
 

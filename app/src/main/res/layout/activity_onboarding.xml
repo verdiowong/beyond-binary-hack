@@ -99,6 +99,7 @@
                         android:minHeight="48dp"
                         android:text="Touch (buttons only)"
                         android:contentDescription="Interaction mode: Touch only, use buttons to navigate"
+                        android:textColor="@color/text_primary"
                         android:textSize="16sp"
                         android:checked="true" />
 
@@ -109,6 +110,7 @@
                         android:minHeight="48dp"
                         android:text="Voice (speech commands)"
                         android:contentDescription="Interaction mode: Voice only, use speech commands to navigate"
+                        android:textColor="@color/text_primary"
                         android:textSize="16sp" />
 
                     <RadioButton
@@ -118,6 +120,7 @@
                         android:minHeight="48dp"
                         android:text="Both (touch + voice)"
                         android:contentDescription="Interaction mode: Both touch and voice enabled"
+                        android:textColor="@color/text_primary"
                         android:textSize="16sp" />
                 </RadioGroup>
             </LinearLayout>
@@ -310,10 +313,29 @@
                     android:textColor="@color/text_secondary"
                     android:textSize="16sp" />
 
+                <!-- Blood type -->
                 <com.google.android.material.textfield.TextInputLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="24dp"
+                    android:hint="Blood Type (e.g. O+, A-)"
+                    app:boxCornerRadiusBottomEnd="12dp"
+                    app:boxCornerRadiusBottomStart="12dp"
+                    app:boxCornerRadiusTopEnd="12dp"
+                    app:boxCornerRadiusTopStart="12dp">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/inputBloodType"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="text"
+                        android:textSize="18sp" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <com.google.android.material.textfield.TextInputLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
                     android:hint="Medical Conditions (e.g. Diabetes, Epilepsy)"
                     app:boxCornerRadiusBottomEnd="12dp"
                     app:boxCornerRadiusBottomStart="12dp"
@@ -333,7 +355,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
-                    android:hint="Allergies (e.g. Penicillin, Peanuts)"
+                    android:hint="Allergies (If Any)"
                     app:boxCornerRadiusBottomEnd="12dp"
                     app:boxCornerRadiusBottomStart="12dp"
                     app:boxCornerRadiusTopEnd="12dp"
@@ -341,6 +363,26 @@
 
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/inputAllergies"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="textMultiLine"
+                        android:minLines="2"
+                        android:textSize="18sp" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <!-- Medications -->
+                <com.google.android.material.textfield.TextInputLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:hint="Medications (If Any)"
+                    app:boxCornerRadiusBottomEnd="12dp"
+                    app:boxCornerRadiusBottomStart="12dp"
+                    app:boxCornerRadiusTopEnd="12dp"
+                    app:boxCornerRadiusTopStart="12dp">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/inputMedications"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:inputType="textMultiLine"

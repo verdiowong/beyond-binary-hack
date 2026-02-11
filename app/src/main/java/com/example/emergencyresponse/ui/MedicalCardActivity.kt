@@ -31,7 +31,9 @@ class MedicalCardActivity : AppCompatActivity() {
         val medCardName: TextView = findViewById(R.id.medCardName)
         val medCardId: TextView = findViewById(R.id.medCardId)
         val medCardConditions: TextView = findViewById(R.id.medCardConditions)
+        val medCardBloodType: TextView = findViewById(R.id.medCardBloodType)
         val medCardAllergies: TextView = findViewById(R.id.medCardAllergies)
+        val medCardMedications: TextView = findViewById(R.id.medCardMedications)
         val medCardContact: TextView = findViewById(R.id.medCardContact)
         val medCardAddress: TextView = findViewById(R.id.medCardAddress)
 
@@ -39,7 +41,9 @@ class MedicalCardActivity : AppCompatActivity() {
         medCardName.text = profile.name.ifBlank { "Not set" }
         medCardId.text = profile.medicalId.ifBlank { "Not set" }
         medCardConditions.text = profile.medicalConditions.ifBlank { "None recorded" }
+        medCardBloodType.text = profile.bloodType.ifBlank { "Not set" }
         medCardAllergies.text = profile.allergies.ifBlank { "None recorded" }
+        medCardMedications.text = profile.medications.ifBlank { "None recorded" }
         medCardContact.text = profile.caregiverNumber.ifBlank { "Not set" }
 
         val address = buildString {
@@ -64,12 +68,16 @@ class MedicalCardActivity : AppCompatActivity() {
             appendLine()
             appendLine("Name: ${profile.name.ifBlank { "N/A" }}")
             appendLine("Medical ID: ${profile.medicalId.ifBlank { "N/A" }}")
+            appendLine("Blood Type: ${profile.bloodType.ifBlank { "N/A" }}")
             appendLine()
             appendLine("Medical Conditions:")
             appendLine(profile.medicalConditions.ifBlank { "  None recorded" })
             appendLine()
             appendLine("Allergies:")
             appendLine(profile.allergies.ifBlank { "  None recorded" })
+            appendLine()
+            appendLine("Medications:")
+            appendLine(profile.medications.ifBlank { "  None recorded" })
             appendLine()
             appendLine("Emergency Contact: ${profile.caregiverNumber.ifBlank { "N/A" }}")
             if (profile.secondaryContact.isNotBlank()) {

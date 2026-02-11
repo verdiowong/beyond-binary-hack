@@ -141,6 +141,25 @@
                     app:strokeColor="@color/cancel_stroke"
                     app:strokeWidth="1dp" />
 
+                <!-- Bystander assistance button — prominent filled style -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/bystanderIdleButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:minHeight="64dp"
+                    android:text="🆘  Bystander Help Cards"
+                    android:contentDescription="Open bystander assistance help cards"
+                    android:textAllCaps="false"
+                    android:textColor="@color/text_on_colored"
+                    android:textSize="17sp"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.02"
+                    app:backgroundTint="@color/police_blue"
+                    app:cornerRadius="20dp"
+                    app:rippleColor="@color/ripple_light"
+                    android:elevation="4dp" />
+
             </LinearLayout>
         </ScrollView>
 

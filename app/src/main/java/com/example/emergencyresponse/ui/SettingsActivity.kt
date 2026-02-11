@@ -25,7 +25,9 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var settingsCaregiver: TextInputEditText
     private lateinit var settingsSecondary: TextInputEditText
     private lateinit var settingsMedical: TextInputEditText
+    private lateinit var settingsBloodType: TextInputEditText
     private lateinit var settingsAllergies: TextInputEditText
+    private lateinit var settingsMedications: TextInputEditText
     private lateinit var settingsMedicalId: TextInputEditText
     private lateinit var settingsCommMode: RadioGroup
 
@@ -42,7 +44,9 @@ class SettingsActivity : AppCompatActivity() {
         settingsCaregiver = findViewById(R.id.settingsCaregiver)
         settingsSecondary = findViewById(R.id.settingsSecondary)
         settingsMedical = findViewById(R.id.settingsMedical)
+        settingsBloodType = findViewById(R.id.settingsBloodType)
         settingsAllergies = findViewById(R.id.settingsAllergies)
+        settingsMedications = findViewById(R.id.settingsMedications)
         settingsMedicalId = findViewById(R.id.settingsMedicalId)
         settingsCommMode = findViewById(R.id.settingsCommMode)
 
@@ -64,7 +68,9 @@ class SettingsActivity : AppCompatActivity() {
         settingsCaregiver.setText(p.caregiverNumber)
         settingsSecondary.setText(p.secondaryContact)
         settingsMedical.setText(p.medicalConditions)
+        settingsBloodType.setText(p.bloodType)
         settingsAllergies.setText(p.allergies)
+        settingsMedications.setText(p.medications)
         settingsMedicalId.setText(p.medicalId)
         when (p.communicationMode) {
             UserProfile.COMM_MODE_VOICE -> settingsCommMode.check(R.id.settingsRadioVoice)
@@ -87,7 +93,9 @@ class SettingsActivity : AppCompatActivity() {
             caregiverNumber = settingsCaregiver.text?.toString()?.trim() ?: "",
             secondaryContact = settingsSecondary.text?.toString()?.trim() ?: "",
             medicalConditions = settingsMedical.text?.toString()?.trim() ?: "",
+            bloodType = settingsBloodType.text?.toString()?.trim() ?: "",
             allergies = settingsAllergies.text?.toString()?.trim() ?: "",
+            medications = settingsMedications.text?.toString()?.trim() ?: "",
             medicalId = settingsMedicalId.text?.toString()?.trim() ?: "",
             communicationMode = commMode
         )
