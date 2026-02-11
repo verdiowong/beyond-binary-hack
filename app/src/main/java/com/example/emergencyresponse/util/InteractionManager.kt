@@ -42,6 +42,9 @@ class InteractionManager(private val context: Context) {
     /** Saved music stream volume, restored after TTS finishes. */
     private var savedMusicVolume: Int = -1
 
+    /** Last short TTS prompt spoken for the current state. Used to filter out STT echo. */
+    private var lastSpokenPrompt: String? = null
+
     // ── TTS ─────────────────────────────────────────────────────────────────
 
     private var tts: TextToSpeech? = null
@@ -145,8 +148,15 @@ class InteractionManager(private val context: Context) {
      * TTS messages are kept SHORT to maximize user response time.
      */
     fun onStateChanged(state: EmergencyUiState) {
+        // For IDLE, stay quiet (no TTS) and clear any previous prompt.
+        if (state == EmergencyUiState.IDLE) {
+            lastSpokenPrompt = null
+            return
+        }
+
         val spoken = when (state) {
-            EmergencyUiState.IDLE -> "Idle."
+            // Already handled above with an early return; this branch is never reached
+            EmergencyUiState.IDLE -> ""
             // SHORT — leaves ~8s for the user to respond within the 10s countdown
             EmergencyUiState.DROP_COUNTDOWN -> "Fall detected. Say help, or okay to cancel."
             EmergencyUiState.SERVICE_SELECTION -> "Choose service."
@@ -154,6 +164,7 @@ class InteractionManager(private val context: Context) {
             EmergencyUiState.LOCATION_CONFIRM -> "Confirm location."
             EmergencyUiState.DISPATCH_ACTIVE -> "Dispatch sent."
         }
+        lastSpokenPrompt = spoken
         // Reset: assume no options will be queued (countdown, location, dispatch)
         lastExpectedUtterance = UTT_STATE
         speak(spoken)
@@ -181,6 +192,41 @@ class InteractionManager(private val context: Context) {
 
     private fun speak(text: String) {
         tts?.speak(text, TextToSpeech.QUEUE_FLUSH, Bundle(), UTT_STATE)
+    }
+
+    // Normalize text for echo comparison: lowercase, strip punctuation, collapse spaces.
+    private fun normalizeForEcho(text: String): String {
+        return text
+            .lowercase(Locale.US)
+            .replace("[^a-z0-9\\s]".toRegex(), " ")
+            .replace("\\s+".toRegex(), " ")
+            .trim()
+    }
+
+    /**
+     * Heuristic: returns true when an STT result is likely just the TTS prompt
+     * being picked up by the microphone (echo).
+     *
+     * We only treat LONG, highly-overlapping phrases as echo; short commands
+     * like "help" or "okay" are never filtered by this.
+     */
+    private fun looksLikeTtsEcho(candidate: String): Boolean {
+        val prompt = lastSpokenPrompt ?: return false
+        val normPrompt = normalizeForEcho(prompt)
+        val normText = normalizeForEcho(candidate)
+
+        // Too short to be our own prompt, treat as a real command.
+        if (normText.length < 10) return false
+
+        val promptWords = normPrompt.split(" ")
+        val textWords = normText.split(" ")
+        if (textWords.isEmpty()) return false
+
+        val overlap = textWords.toSet().intersect(promptWords.toSet()).size
+        val ratio = overlap.toDouble() / textWords.size.toDouble()
+
+        // Require at least 3 overlapping words and majority overlap.
+        return overlap >= 3 && ratio >= 0.6
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -377,6 +423,10 @@ class InteractionManager(private val context: Context) {
         Log.d(TAG, "STT final results: ${matches.joinToString(" | ")}")
 
         for (match in matches) {
+            if (looksLikeTtsEcho(match)) {
+                Log.d(TAG, "STT result ignored as probable TTS echo: '$match'")
+                continue
+            }
             val lower = match.lowercase()
             for ((keyword, action) in currentKeywords) {
                 if (lower.contains(keyword)) {

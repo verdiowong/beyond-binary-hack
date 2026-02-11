@@ -209,6 +209,26 @@
                     android:textSize="18sp" />
             </com.google.android.material.textfield.TextInputLayout>
 
+            <!-- Allergies -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:hint="Allergies (e.g. Penicillin, Peanuts)"
+                app:boxCornerRadiusBottomEnd="12dp"
+                app:boxCornerRadiusBottomStart="12dp"
+                app:boxCornerRadiusTopEnd="12dp"
+                app:boxCornerRadiusTopStart="12dp">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/settingsAllergies"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="textMultiLine"
+                    android:minLines="2"
+                    android:textSize="18sp" />
+            </com.google.android.material.textfield.TextInputLayout>
+
             <!-- Medical ID -->
             <com.google.android.material.textfield.TextInputLayout
                 android:layout_width="match_parent"
@@ -272,6 +292,22 @@
                     android:contentDescription="Interaction mode: Both touch and voice enabled"
                     android:textSize="16sp" />
             </RadioGroup>
+
+            <!-- Medical Card button -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnMedicalCard"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:minHeight="56dp"
+                android:text="\u2695\uFE0F  View Medical Card"
+                android:contentDescription="View and share your medical card"
+                android:textAllCaps="false"
+                android:textSize="16sp"
+                app:cornerRadius="16dp"
+                app:strokeColor="@color/primary"
+                app:strokeWidth="1dp" />
 
         </LinearLayout>
     </ScrollView>

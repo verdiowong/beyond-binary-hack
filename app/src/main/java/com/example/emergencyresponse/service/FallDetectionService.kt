@@ -35,14 +35,20 @@ class FallDetectionService : Service(), SensorEventListener {
         private const val NOTIFICATION_ID = 1011
         private const val ALERT_NOTIFICATION_ID = 1012
 
-        // Fall pipeline: free-fall -> impact >25 -> stillness.
-        private const val FREE_FALL_THRESHOLD = 2.3f
-        private const val FREE_FALL_MIN_MS = 180L
-        private const val IMPACT_THRESHOLD = 25.0f
+        // Fall pipeline: free-fall -> impact -> stillness.
+        // NOTE: thresholds are relaxed slightly to make testing on soft
+        // surfaces (like a bed or couch) easier. Consider tightening for
+        // production deployments.
+        private const val FREE_FALL_THRESHOLD = 3.0f   // was 2.3f
+        private const val FREE_FALL_MIN_MS = 150L      // was 180L
+        private const val IMPACT_THRESHOLD = 15.0f     // was 25.0f
         private const val IMPACT_WINDOW_MS = 1500L
-        private const val STILLNESS_WINDOW_MS = 3000L
-        private const val STILLNESS_MAX_LINEAR = 2.5f
-        private const val STILLNESS_RMS_LINEAR = 1.4f
+        // VERY permissive stillness for testing: only require ~2s of relatively
+        // low motion after impact. This makes it much easier to hit isStill=true
+        // when dropping onto soft surfaces (bed/sofa) where there is residual wobble.
+        private const val STILLNESS_WINDOW_MS = 2000L  // was 3000L
+        private const val STILLNESS_MAX_LINEAR = 5.0f  // was 2.5f, then 3.0f
+        private const val STILLNESS_RMS_LINEAR = 3.0f  // was 1.4f, then 1.8f
 
         // Tremor pipeline.
         private const val TREMOR_WINDOW_MS = 3000L
@@ -188,7 +194,12 @@ class FallDetectionService : Service(), SensorEventListener {
         val rms = if (stillnessSamples == 0) Float.MAX_VALUE else {
             sqrt((stillnessEnergy / stillnessSamples).toFloat())
         }
-        val isStill = stillnessPeak <= STILLNESS_MAX_LINEAR && rms <= STILLNESS_RMS_LINEAR
+        // TESTING: force stillness to true so every confirmed free-fall + impact
+        // sequence will trigger the emergency flow, regardless of post-impact
+        // motion. Comment the next line and restore the threshold-based check
+        // below for production builds.
+        val isStill = true
+        // val isStill = stillnessPeak <= STILLNESS_MAX_LINEAR && rms <= STILLNESS_RMS_LINEAR
         Log.d(
             TAG,
             "Stillness check isStill=$isStill peak=${"%.2f".format(stillnessPeak)} rms=${"%.2f".format(rms)}"

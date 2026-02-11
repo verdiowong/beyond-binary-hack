@@ -12,6 +12,7 @@ data class UserProfile(
     val caregiverNumber: String = "",
     val secondaryContact: String = "",
     val medicalConditions: String = "",
+    val allergies: String = "",
     val medicalId: String = "",
     val communicationMode: String = COMM_MODE_TOUCH // "touch", "voice", "both"
 ) {
