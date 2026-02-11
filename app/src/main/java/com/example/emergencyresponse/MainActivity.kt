@@ -36,12 +36,11 @@ enum class EmergencyUiState {
 }
 
 data class EmergencyEvent(
-    val source: String,
-    val state: EmergencyUiState,
-    val service: String? = null,
-    val context: String? = null,
-    val location: String? = null,
-    val timestampMillis: Long = System.currentTimeMillis()
+    var serviceType: String = "", // e.g. "Ambulance"
+    var context: String = "",     // e.g. "Chest Pain"
+    var address: String = "",     // e.g. "Blk 889 Tampines St 81"
+    var unitNumber: String = "",  // e.g. "05-123"
+    var caregiverNumber: String = "91234567" // Pre-saved contact
 )
 
 data class EmergencyUiModel(
@@ -55,62 +54,59 @@ class EmergencyViewModel : ViewModel() {
     private val _uiModel = MutableStateFlow(EmergencyUiModel())
     val uiModel: StateFlow<EmergencyUiModel> = _uiModel.asStateFlow()
 
-    private val _events = MutableSharedFlow<EmergencyEvent>(extraBufferCapacity = 8)
-    val events: SharedFlow<EmergencyEvent> = _events.asSharedFlow()
+    private val _emergencyEvent = MutableStateFlow(EmergencyEvent())
+    val emergencyEvent: StateFlow<EmergencyEvent> = _emergencyEvent.asStateFlow()
+
+    private val _stateEvents = MutableSharedFlow<EmergencyUiState>(extraBufferCapacity = 8)
+    val stateEvents: SharedFlow<EmergencyUiState> = _stateEvents.asSharedFlow()
+
+    private fun transitionTo(state: EmergencyUiState) {
+        _uiModel.update { it.copy(state = state) }
+        _stateEvents.tryEmit(state)
+    }
 
     fun onEmergencyTrigger(source: String) {
-        _uiModel.update { it.copy(state = EmergencyUiState.DROP_COUNTDOWN) }
-        _events.tryEmit(EmergencyEvent(source = source, state = EmergencyUiState.DROP_COUNTDOWN))
+        transitionTo(EmergencyUiState.DROP_COUNTDOWN)
     }
 
     fun onCountdownFinished() {
-        _uiModel.update { it.copy(state = EmergencyUiState.SERVICE_SELECTION) }
-        _events.tryEmit(EmergencyEvent(source = "COUNTDOWN", state = EmergencyUiState.SERVICE_SELECTION))
+        transitionTo(EmergencyUiState.SERVICE_SELECTION)
     }
 
     fun onServiceSelected(service: String) {
-        _uiModel.update { it.copy(state = EmergencyUiState.CONTEXT_SELECTION, selectedService = service) }
-        _events.tryEmit(
-            EmergencyEvent(
-                source = "USER",
-                state = EmergencyUiState.CONTEXT_SELECTION,
-                service = service
-            )
-        )
+        _emergencyEvent.update { it.copy(serviceType = service) }
+        _uiModel.update { it.copy(selectedService = service) }
+        transitionTo(EmergencyUiState.CONTEXT_SELECTION)
     }
 
     fun onContextSelected(context: String) {
-        _uiModel.update { it.copy(state = EmergencyUiState.LOCATION_CONFIRM, selectedContext = context) }
-        _events.tryEmit(
-            EmergencyEvent(
-                source = "USER",
-                state = EmergencyUiState.LOCATION_CONFIRM,
-                service = _uiModel.value.selectedService,
-                context = context
-            )
-        )
+        _emergencyEvent.update { it.copy(context = context) }
+        _uiModel.update { it.copy(selectedContext = context) }
+        transitionTo(EmergencyUiState.LOCATION_CONFIRM)
     }
 
     fun onLocationResolved(address: String) {
         _uiModel.update { it.copy(resolvedAddress = address) }
+        _emergencyEvent.update { it.copy(address = address) }
     }
 
     fun onLocationConfirmed() {
-        _uiModel.update { it.copy(state = EmergencyUiState.DISPATCH_ACTIVE) }
-        _events.tryEmit(
-            EmergencyEvent(
-                source = "USER",
-                state = EmergencyUiState.DISPATCH_ACTIVE,
-                service = _uiModel.value.selectedService,
-                context = _uiModel.value.selectedContext,
-                location = _uiModel.value.resolvedAddress
-            )
-        )
+        transitionTo(EmergencyUiState.DISPATCH_ACTIVE)
     }
 
     fun onCancel() {
         _uiModel.value = EmergencyUiModel()
-        _events.tryEmit(EmergencyEvent(source = "USER", state = EmergencyUiState.IDLE))
+        _emergencyEvent.value = EmergencyEvent()
+        _stateEvents.tryEmit(EmergencyUiState.IDLE)
+    }
+
+    fun updateUnitAndCaregiver(unitNumber: String, caregiverNumber: String) {
+        _emergencyEvent.update {
+            it.copy(
+                unitNumber = unitNumber,
+                caregiverNumber = caregiverNumber
+            )
+        }
     }
 }
 
@@ -208,13 +204,13 @@ class MainActivity : AppCompatActivity() {
 
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
-                emergencyViewModel.events.collect { handleEvent(it) }
+                emergencyViewModel.stateEvents.collect { handleStateEvent(it) }
             }
         }
     }
 
-    private fun handleEvent(event: EmergencyEvent) {
-        when (event.state) {
+    private fun handleStateEvent(state: EmergencyUiState) {
+        when (state) {
             EmergencyUiState.LOCATION_CONFIRM -> {
                 locationHandler.requestHighAccuracyLocation(
                     onAddressReady = { address -> emergencyViewModel.onLocationResolved(address) },
@@ -224,14 +220,25 @@ class MainActivity : AppCompatActivity() {
 
             EmergencyUiState.DISPATCH_ACTIVE -> {
                 val (unitNumber, medicalId) = locationHandler.loadUserProfile()
-                val contextWithMedical =
-                    listOfNotNull(event.context, medicalId?.let { "Medical ID: $it" }).joinToString(". ")
-                val dispatchEvent = event.copy(context = contextWithMedical)
+                val baseEvent = emergencyViewModel.emergencyEvent.value
+                val enrichedContext = if (medicalId.isNullOrBlank()) {
+                    baseEvent.context
+                } else {
+                    listOf(baseEvent.context, "Medical ID: $medicalId")
+                        .filter { it.isNotBlank() }
+                        .joinToString(". ")
+                }
+
+                val normalizedUnit = unitNumber ?: "01-01"
+                val normalizedCaregiver = baseEvent.caregiverNumber.ifBlank { "91234567" }
+                emergencyViewModel.updateUnitAndCaregiver(normalizedUnit, normalizedCaregiver)
+
+                val dispatchEvent = emergencyViewModel.emergencyEvent.value.copy(
+                    context = enrichedContext
+                )
 
                 dispatchBridge.dispatchSms(
                     event = dispatchEvent,
-                    unitNumber = unitNumber ?: "01-01",
-                    caregiverPhone = "+6500000000",
                     onComplete = { success, result ->
                         subtitleText.text = if (success) result else "Dispatch error: $result"
                     }

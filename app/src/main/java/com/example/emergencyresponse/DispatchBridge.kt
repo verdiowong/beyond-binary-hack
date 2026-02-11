@@ -26,8 +26,6 @@ class DispatchBridge(private val context: Context) {
     // and a secondary caregiver's phone number.
     fun dispatchSms(
         event: EmergencyEvent,
-        unitNumber: String,
-        caregiverPhone: String,
         onComplete: (Boolean, String) -> Unit
     ) {
         if (
@@ -39,16 +37,22 @@ class DispatchBridge(private val context: Context) {
         }
 
         val message = formatScdfMessage(
-            service = event.service ?: "Ambulance",
-            address = event.location ?: "Unknown location",
-            unitNumber = unitNumber,
-            contextText = event.context ?: "No context"
+            service = event.serviceType.ifBlank { "Ambulance" },
+            address = event.address.ifBlank { "Unknown location" },
+            unitNumber = event.unitNumber.ifBlank { "01-01" },
+            contextText = event.context.ifBlank { "No context" }
         )
 
         try {
             val smsManager = SmsManager.getDefault()
             smsManager.sendTextMessage(SCDF_NUMBER, null, message, null, null)
-            smsManager.sendTextMessage(caregiverPhone, null, message, null, null)
+            smsManager.sendTextMessage(
+                event.caregiverNumber.ifBlank { "91234567" },
+                null,
+                message,
+                null,
+                null
+            )
             onComplete(true, "SMS sent to SCDF and caregiver.")
         } catch (ex: Exception) {
             onComplete(false, "SMS dispatch failed: ${ex.message}")
