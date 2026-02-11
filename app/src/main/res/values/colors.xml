@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- Brand -->
+    <color name="primary">#1B5E20</color>
+    <color name="primary_dark">#0A3A12</color>
+    <color name="on_primary">#FFFFFF</color>
+
+    <!-- Emergency states -->
+    <color name="emergency_red">#D32F2F</color>
+    <color name="emergency_red_dark">#B71C1C</color>
+    <color name="warning_amber">#F57F17</color>
+    <color name="safe_green">#2E7D32</color>
+    <color name="safe_green_dark">#1B5E20</color>
+    <color name="fire_orange">#E65100</color>
+    <color name="police_blue">#1565C0</color>
+    <color name="police_blue_dark">#0D47A1</color>
+
+    <!-- State backgrounds -->
+    <color name="bg_idle">#E8F5E9</color>
+    <color name="bg_countdown">#FFF3E0</color>
+    <color name="bg_selection">#ECEFF1</color>
+    <color name="bg_location">#E3F2FD</color>
+    <color name="bg_dispatch">#E8F5E9</color>
+
+    <!-- Surfaces -->
+    <color name="surface">#FAFAFA</color>
+    <color name="card_surface">#FFFFFF</color>
+
+    <!-- Text -->
+    <color name="text_primary">#212121</color>
+    <color name="text_secondary">#616161</color>
+    <color name="text_on_colored">#FFFFFF</color>
+    <color name="text_hint">#9E9E9E</color>
+
+    <!-- Neutral / cancel -->
+    <color name="cancel_grey">#757575</color>
+    <color name="cancel_stroke">#BDBDBD</color>
+    <color name="neutral_dark">#546E7A</color>
+
+    <!-- Status indicator -->
+    <color name="status_active">#4CAF50</color>
+
+    <!-- Common -->
+    <color name="white">#FFFFFF</color>
+    <color name="ripple_light">#40FFFFFF</color>
+
+</resources>

@@ -1,4 +1,4 @@
-package com.example.emergencyresponse
+package com.example.emergencyresponse.service
 
 import android.content.BroadcastReceiver
 import android.content.Context

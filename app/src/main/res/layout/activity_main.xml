@@ -1,83 +1,297 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/rootLayout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:padding="16dp">
+    android:background="@color/bg_idle"
+    android:orientation="vertical">
 
     <ViewSwitcher
         android:id="@+id/stateSwitcher"
         android:layout_width="match_parent"
         android:layout_height="match_parent">
 
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <!-- CHILD 0 : IDLE STATE                                      -->
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <ScrollView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:fillViewport="true">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_horizontal"
+                android:orientation="vertical"
+                android:paddingStart="24dp"
+                android:paddingTop="56dp"
+                android:paddingEnd="24dp"
+                android:paddingBottom="32dp">
+
+                <!-- Shield icon -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:importantForAccessibility="no"
+                    android:text="🛡️"
+                    android:textSize="72sp" />
+
+                <!-- App title -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:letterSpacing="0.02"
+                    android:text="Emergency Response"
+                    android:textColor="@color/text_primary"
+                    android:textSize="30sp"
+                    android:textStyle="bold" />
+
+                <!-- App subtitle -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="Your safety companion"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="16sp" />
+
+                <!-- Status card -->
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="36dp"
+                    app:cardBackgroundColor="@color/card_surface"
+                    app:cardCornerRadius="16dp"
+                    app:cardElevation="2dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="20dp">
+
+                        <!-- Active indicator row -->
+                        <LinearLayout
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
+
+                            <View
+                                android:layout_width="12dp"
+                                android:layout_height="12dp"
+                                android:background="@drawable/bg_status_active"
+                                android:importantForAccessibility="no" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="10dp"
+                                android:text="Monitoring Active"
+                                android:textColor="@color/safe_green"
+                                android:textSize="16sp"
+                                android:textStyle="bold" />
+                        </LinearLayout>
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:lineSpacingMultiplier="1.3"
+                            android:text="Fall and tremor detection is running in the background.\nPress the button below or a volume key to trigger."
+                            android:textColor="@color/text_secondary"
+                            android:textSize="14sp" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- Emergency trigger button -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/idleTriggerButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="36dp"
+                    android:minHeight="120dp"
+                    android:text="Start Emergency Flow"
+                    android:contentDescription="Start emergency flow. Double tap to activate."
+                    android:textAllCaps="false"
+                    android:textColor="@color/text_on_colored"
+                    android:textSize="22sp"
+                    android:textStyle="bold"
+                    app:backgroundTint="@color/emergency_red"
+                    app:cornerRadius="24dp"
+                    app:rippleColor="@color/ripple_light" />
+
+                <!-- Settings button -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/settingsButton"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:minHeight="56dp"
+                    android:text="Settings"
+                    android:contentDescription="Open profile settings"
+                    android:textAllCaps="false"
+                    android:textColor="@color/neutral_dark"
+                    android:textSize="16sp"
+                    app:cornerRadius="16dp"
+                    app:strokeColor="@color/cancel_stroke"
+                    app:strokeWidth="1dp" />
+
+            </LinearLayout>
+        </ScrollView>
+
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <!-- CHILD 1 : FLOW STATES (countdown → dispatch)              -->
+        <!-- ═══════════════════════════════════════════════════════════ -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:gravity="center"
             android:orientation="vertical">
 
-            <Button
-                android:id="@+id/idleTriggerButton"
+            <!-- State info card -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/stateCard"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:minHeight="100dp"
-                android:text="Start Emergency Flow"
-                android:textSize="22sp" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:gravity="center_horizontal"
-            android:orientation="vertical">
-
-            <TextView
-                android:id="@+id/titleText"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
+                android:layout_marginStart="20dp"
                 android:layout_marginTop="32dp"
-                android:gravity="center"
-                android:text="Ready"
-                android:textSize="28sp"
-                android:textStyle="bold" />
+                android:layout_marginEnd="20dp"
+                app:cardBackgroundColor="@color/card_surface"
+                app:cardCornerRadius="20dp"
+                app:cardElevation="4dp">
 
-            <TextView
-                android:id="@+id/subtitleText"
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="24dp">
+
+                    <TextView
+                        android:id="@+id/titleText"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Ready"
+                        android:textColor="@color/text_primary"
+                        android:textSize="26sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/subtitleText"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:lineSpacingMultiplier="1.25"
+                        android:text="Status details"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="17sp" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Flexible spacer pushes buttons to the bottom -->
+            <View
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:layout_weight="1" />
+
+            <!-- Action buttons -->
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:gravity="center"
-                android:text="Status details"
-                android:textSize="18sp" />
+                android:orientation="vertical"
+                android:paddingStart="20dp"
+                android:paddingEnd="20dp"
+                android:paddingBottom="28dp">
 
-            <Button
-                android:id="@+id/primaryActionButton"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
-                android:minHeight="100dp"
-                android:text="Primary"
-                android:textSize="24sp" />
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/primaryActionButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:minHeight="100dp"
+                    android:text="Primary"
+                    android:contentDescription="Primary action button"
+                    android:textAllCaps="false"
+                    android:textColor="@color/text_on_colored"
+                    android:textSize="22sp"
+                    android:textStyle="bold"
+                    app:backgroundTint="@color/emergency_red"
+                    app:cornerRadius="20dp"
+                    app:rippleColor="@color/ripple_light" />
 
-            <Button
-                android:id="@+id/secondaryActionButton"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:minHeight="100dp"
-                android:text="Secondary"
-                android:textSize="24sp"
-                android:visibility="gone" />
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/secondaryActionButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:minHeight="88dp"
+                    android:text="Secondary"
+                    android:contentDescription="Secondary action button"
+                    android:textAllCaps="false"
+                    android:textColor="@color/text_on_colored"
+                    android:textSize="20sp"
+                    android:textStyle="bold"
+                    android:visibility="gone"
+                    app:backgroundTint="@color/police_blue"
+                    app:cornerRadius="20dp"
+                    app:rippleColor="@color/ripple_light" />
 
-            <Button
-                android:id="@+id/cancelButton"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:minHeight="100dp"
-                android:text="Cancel"
-                android:textSize="22sp"
-                android:visibility="gone" />
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/tertiaryActionButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:minHeight="88dp"
+                    android:text="Tertiary"
+                    android:contentDescription="Third action button"
+                    android:textAllCaps="false"
+                    android:textColor="@color/text_on_colored"
+                    android:textSize="20sp"
+                    android:textStyle="bold"
+                    android:visibility="gone"
+                    app:backgroundTint="@color/safe_green"
+                    app:cornerRadius="20dp"
+                    app:rippleColor="@color/ripple_light" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/quaternaryActionButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:minHeight="88dp"
+                    android:text="Quaternary"
+                    android:contentDescription="Fourth action button"
+                    android:textAllCaps="false"
+                    android:textColor="@color/text_on_colored"
+                    android:textSize="20sp"
+                    android:textStyle="bold"
+                    android:visibility="gone"
+                    app:backgroundTint="@color/warning_amber"
+                    app:cornerRadius="20dp"
+                    app:rippleColor="@color/ripple_light" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/cancelButton"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:minHeight="72dp"
+                    android:text="Cancel"
+                    android:contentDescription="Cancel and return to idle"
+                    android:textAllCaps="false"
+                    android:textColor="@color/cancel_grey"
+                    android:textSize="18sp"
+                    android:visibility="gone"
+                    app:cornerRadius="20dp"
+                    app:rippleColor="#20000000"
+                    app:strokeColor="@color/cancel_stroke"
+                    app:strokeWidth="2dp" />
+
+            </LinearLayout>
         </LinearLayout>
+
     </ViewSwitcher>
 </LinearLayout>

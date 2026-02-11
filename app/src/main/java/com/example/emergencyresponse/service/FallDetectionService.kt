@@ -1,4 +1,4 @@
-package com.example.emergencyresponse
+package com.example.emergencyresponse.service
 
 import android.app.Notification
 import android.app.NotificationChannel
@@ -12,9 +12,11 @@ import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.os.Build
 import android.os.IBinder
+import android.os.PowerManager
 import android.os.SystemClock
 import android.util.Log
 import androidx.core.app.NotificationCompat
+import com.example.emergencyresponse.ui.MainActivity
 import kotlin.math.abs
 import kotlin.math.sqrt
 
@@ -246,6 +248,10 @@ class FallDetectionService : Service(), SensorEventListener {
 
         Log.i(TAG, "Emergency trigger emitted. type=$triggerType")
 
+        // Acquire a partial wake lock so the CPU stays awake long enough
+        // for the broadcast + full-screen notification to fire, even in Doze.
+        acquireEmergencyWakeLock()
+
         // Keep current in-app flow wiring.
         val broadcast = Intent(ACTION_FALL_DETECTED).apply {
             setPackage(packageName)
@@ -255,6 +261,25 @@ class FallDetectionService : Service(), SensorEventListener {
         sendBroadcast(broadcast)
 
         showEmergencyAlertNotification(triggerType)
+    }
+
+    /**
+     * Acquire a short-lived PARTIAL_WAKE_LOCK to guarantee the device
+     * stays awake while the emergency alert notification + broadcast are delivered.
+     * Auto-releases after 30 seconds.
+     */
+    private fun acquireEmergencyWakeLock() {
+        try {
+            val pm = getSystemService(POWER_SERVICE) as PowerManager
+            val wl = pm.newWakeLock(
+                PowerManager.PARTIAL_WAKE_LOCK,
+                "EmergencyResponse::FallTriggerWakeLock"
+            )
+            wl.acquire(30_000L) // 30 seconds max
+            Log.d(TAG, "Emergency wake lock acquired (30s timeout)")
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to acquire wake lock: ${e.message}")
+        }
     }
 
     private fun registerSensorIfNeeded() {
@@ -280,8 +305,16 @@ class FallDetectionService : Service(), SensorEventListener {
     private fun startAsForeground() {
         createNotificationChannels()
         val notification = buildForegroundNotification()
-        startForeground(NOTIFICATION_ID, notification)
-        Log.i(TAG, "Foreground notification started (id=$NOTIFICATION_ID)")
+        try {
+            startForeground(NOTIFICATION_ID, notification)
+            Log.i(TAG, "Foreground notification started (id=$NOTIFICATION_ID)")
+        } catch (e: Exception) {
+            // On API 34+ this can fail if ACTIVITY_RECOGNITION is not yet granted
+            // (required for foregroundServiceType="health"). The service will still
+            // run but without the foreground priority until permissions are granted
+            // and it is restarted by MainActivity.
+            Log.e(TAG, "startForeground failed (missing permission?): ${e.message}")
+        }
     }
 
     private fun createNotificationChannels() {
