@@ -1,233 +1,232 @@
-# Beyond Binary Hack - Native Android Emergency Skeleton
+# Beyond Binary Hack - Inclusive Emergency Response App
 
-This repository now contains a native Android Kotlin skeleton for an emergency response app designed for motor-impaired users.
+A native Android (Kotlin) emergency response application designed for motor-impaired users. The app detects falls via accelerometer sensors, guides the user through an accessible emergency flow using voice, touch, and haptic feedback, and dispatches SMS alerts to SCDF (Singapore Civil Defence Force) and caregiver contacts.
 
-This documentation is focused on the native Android implementation under `app/src/main/` and intentionally ignores `frontend/sos-assist` for now.
+## Features
 
-Run/setup guide: `docs/run-native-android.md`
+- **Fall & Tremor Detection** -- Background foreground service monitors the accelerometer for free-fall + impact sequences and sustained severe tremor patterns. Tremor thresholds are tuned to avoid false positives from normal activity (walking, typing) while still catching genuine episodes.
+- **Direct Screen Pop-up** -- When a fall/tremor is detected, the app launches the countdown screen directly (not just a notification), so the user sees it immediately even if the app was in the background.
+- **Accessible Emergency Flow** -- Large touch targets, Text-to-Speech announcements, Speech-to-Text voice commands, and haptic vibration patterns for each state.
+- **Multi-step Emergency Wizard**:
+  1. **Drop Countdown** -- 10-second countdown after fall detection; user can say "help" or "okay" to escalate or cancel. Voice input is active immediately (no waiting for TTS to finish).
+  2. **Service Selection** -- Choose Fire, Ambulance, or Police with large emoji buttons or voice.
+  3. **Context Selection** -- Describe what's happening (e.g. Fall, Chest Pain, Bleeding, My Unit on Fire).
+  4. **Location Confirmation** -- GPS auto-resolve with reverse geocoding; interactive Google Maps WebView for visual confirmation before dispatch.
+  5. **Dispatch** -- Sends formatted SMS to SCDF 70995 and caregiver/secondary contacts with Google Maps link.
+- **User Onboarding** -- Multi-step wizard collects name, address, caregiver contacts, medical info, and communication preference (touch/voice/both).
+- **Settings** -- Edit profile data at any time.
+- **Boot Startup** -- Fall detection service auto-starts on device boot.
+- **OEM Battery Guidance** -- Logs manufacturer-specific instructions for disabling aggressive background killers (Samsung, Xiaomi, Huawei, OPPO, OnePlus, Vivo).
 
-## Project Goal
+## Project Structure
 
-Build a state-driven emergency workflow with a centralized `EmergencyViewModel` that coordinates UI, sensors, voice/vision, location, and dispatch.
+```
+app/src/main/java/com/example/emergencyresponse/
+  model/                         # Data classes, enums, configuration
+    AppConfig.kt                 # Feature flags, defaults, SCDF number
+    EmergencyUiState.kt          # 6-state enum (IDLE -> DISPATCH_ACTIVE)
+    EmergencyUiModel.kt          # Immutable UI render snapshot
+    EmergencyEvent.kt            # Accumulated dispatch payload
+    UserProfile.kt               # User profile data class
+    UserProfileRepository.kt     # SharedPreferences-backed persistence
+    ServiceConfig.kt             # Emergency services registry (Fire/Ambulance/Police + contexts)
 
-## Current Native Android Scope
+  service/                       # Background services
+    FallDetectionService.kt      # Foreground service with accelerometer fall + tremor detection
+    BootReceiver.kt              # Starts FallDetectionService on device boot
 
-Implemented skeleton files:
+  util/                          # Utility handlers
+    DispatchBridge.kt            # SMS formatting and dispatch (SCDF + caregiver)
+    LocationHandler.kt           # GPS location + reverse geocoding
+    InteractionManager.kt        # TTS, STT voice recognition, haptic feedback
 
-- `app/src/main/java/com/example/emergencyresponse/MainActivity.kt`
-- `app/src/main/java/com/example/emergencyresponse/FallDetectionService.kt`
-- `app/src/main/java/com/example/emergencyresponse/InteractionManager.kt`
-- `app/src/main/java/com/example/emergencyresponse/LocationHandler.kt`
-- `app/src/main/java/com/example/emergencyresponse/DispatchBridge.kt`
-- `app/src/main/res/layout/activity_main.xml`
+  ui/                            # Screens and ViewModel
+    MainActivity.kt              # Main emergency flow UI
+    OnboardingActivity.kt        # First-launch profile setup wizard
+    SettingsActivity.kt          # Edit profile screen
+    EmergencyViewModel.kt        # Centralized state machine and event holder
 
-## Architecture Overview
+app/src/main/res/
+  layout/
+    activity_main.xml            # Main flow layout with ViewSwitcher
+    activity_onboarding.xml      # 5-step onboarding wizard layout
+    activity_settings.xml        # Settings form layout
+  values/
+    colors.xml                   # Material 3 color palette
+    themes.xml                   # App theme (Theme.EmergencyResponse)
+  drawable/
+    bg_status_active.xml         # Monitoring status indicator
+```
 
-### Core state machine
+## Architecture
 
-The app uses one shared enum:
+### State Machine
 
-- `EmergencyUiState.IDLE`
-- `EmergencyUiState.DROP_COUNTDOWN`
-- `EmergencyUiState.SERVICE_SELECTION`
-- `EmergencyUiState.CONTEXT_SELECTION`
-- `EmergencyUiState.LOCATION_CONFIRM`
-- `EmergencyUiState.DISPATCH_ACTIVE`
+The app uses a centralized 6-state enum driven by `EmergencyViewModel`:
 
-### Shared app contracts
+```
+IDLE -> DROP_COUNTDOWN -> SERVICE_SELECTION -> CONTEXT_SELECTION -> LOCATION_CONFIRM -> DISPATCH_ACTIVE
+  ^                                                                                          |
+  |__________________________________________________________________________________________|
+                                        (cancel from any state)
+```
 
-Defined in `MainActivity.kt`:
+### Data Flow
 
-- `EmergencyEvent` (cross-module event payload)
-- `EmergencyUiModel` (screen state model)
-- `EmergencyViewModel` (single source of truth for transitions and state)
-
-All modules should communicate through the ViewModel and `EmergencyEvent` semantics.
-
-### Data/control flow
-
-1. Trigger arrives (UI button, volume key, or fall detection).
+1. **Trigger** arrives (fall detection broadcast, UI button, or volume key press).
 2. `EmergencyViewModel` transitions to `DROP_COUNTDOWN`.
-3. Countdown ends or user actions continue flow.
-4. Service/context/location are gathered.
-5. Dispatch module formats and sends SMS.
+3. User responds (voice or touch) to escalate or cancel.
+4. Service type, context, and location are gathered step by step.
+5. `DispatchBridge` formats and sends SMS to SCDF and caregiver contacts.
+
+### Key Design Decisions
+
+- **MVVM** -- `EmergencyViewModel` owns all state; Activities observe via `StateFlow`.
+- **Foreground Service** -- `FallDetectionService` runs with `foregroundServiceType="health"` for reliable background sensor monitoring.
+- **Immediate STT for Countdown** -- During the time-critical `DROP_COUNTDOWN` state, speech recognition starts immediately (in parallel with TTS) so the user can say "help" right away. For other states, STT still waits for TTS to finish to prevent echo false-matches. Volume ducking reduces speaker bleed into the microphone.
+- **Direct Activity Launch** -- When a fall or tremor is detected, the service attempts to launch `MainActivity` directly via `startActivity()` so the countdown screen pops up immediately. This is wrapped in a try-catch because some OEMs / Android 12+ may block background activity starts; the full-screen notification remains as the fallback.
+- **Location Map** -- The location confirmation screen shows a Google Maps WebView embed so the user can visually confirm their position at a glance.
+- **Mock Dispatch** -- SMS to SCDF is mocked by default; caregiver SMS can be tested independently.
+
+## How to Run
+
+### Prerequisites
+
+- **Android Studio** (latest stable, e.g. Ladybug or newer)
+- **JDK 17+** (bundled with Android Studio)
+- **Android SDK 34** (compileSdk/targetSdk)
+- **Physical Android device** or emulator with API 26+ (minSdk 26)
+  - A physical device is strongly recommended for testing fall detection sensors, SMS, and voice recognition.
+
+### Steps
+
+1. **Clone the repository**:
+   ```bash
+   git clone https://github.com/<your-org>/beyond-binary-hack.git
+   cd beyond-binary-hack
+   ```
+
+2. **Open in Android Studio**:
+   - File > Open > select the `beyond-binary-hack` root folder.
+   - Wait for Gradle sync to complete.
+
+3. **Connect a device or start an emulator**:
+   - Enable USB debugging on your physical device, or
+   - Create an AVD with API 26+ in Device Manager.
+
+4. **Build and run**:
+   - Select the `app` run configuration.
+   - Click Run (green play button) or press `Shift+F10`.
+   - The app will install and launch on your device.
+
+5. **Grant permissions** when prompted:
+   - Location (Fine)
+   - SMS
+   - Activity Recognition
+   - Microphone (for voice commands)
+   - Notifications (Android 13+)
+
+6. **Complete onboarding** on first launch:
+   - Enter your name, address, caregiver number, and communication preference.
+
+7. **Test the emergency flow**:
+   - Tap the large "Emergency Help" button on the main screen, or
+   - Press a volume key, or
+   - Simulate a fall broadcast via ADB:
+     ```bash
+     adb shell am broadcast -a com.example.emergencyresponse.ACTION_FALL_DETECTED --es trigger_type fall -p com.example.emergencyresponse
+     ```
+
+### Dispatch Mode Configuration
+
+In `AppConfig.kt` (`model/AppConfig.kt`):
+
+| Flag | Default | Effect |
+|---|---|---|
+| `MOCK_DISPATCH_MODE` | `true` | When `true`, SCDF SMS is **not** sent (logged + shown in dialog). |
+| `TEST_CAREGIVER_SMS` | `true` | When `true` (and mock mode on), sends **real** SMS to caregiver/secondary contact only. |
+
+To go **fully live** (production): set `MOCK_DISPATCH_MODE = false`.
+To go **fully mock** (no SMS at all): set both to `true` / `false` respectively, or set `TEST_CAREGIVER_SMS = false`.
+
+### Troubleshooting
+
+- **R.jar file lock (Windows/OneDrive)**: If Gradle fails with an `IOException` on `R.jar`, close Android Studio, delete the `app/build` folder, and reopen. This is a known OneDrive file-locking issue.
+- **Battery optimization**: The app prompts for battery optimization exemption on first launch. On OEM devices (Samsung, Xiaomi, etc.), you may also need to manually whitelist the app in the manufacturer's battery settings. Check Logcat for `OEM background restriction guidance` messages.
+- **Voice commands not working**: Ensure microphone permission is granted and communication mode is set to "Voice" or "Both" in onboarding/settings.
+- **Location not resolving**: Ensure device GPS is enabled. The app will prompt you to open location settings if GPS is off.
+
+## Permissions
+
+| Permission | Purpose |
+|---|---|
+| `ACCESS_FINE_LOCATION` | GPS for emergency location dispatch |
+| `SEND_SMS` | Send emergency SMS to SCDF and contacts |
+| `RECORD_AUDIO` | Voice command recognition (STT) |
+| `CAMERA` | Reserved for future thumbs-up gesture detection |
+| `FOREGROUND_SERVICE` | Background fall/tremor monitoring |
+| `FOREGROUND_SERVICE_HEALTH` | Health-type foreground service (API 34+) |
+| `ACTIVITY_RECOGNITION` | Required for health foreground service type |
+| `VIBRATE` | Haptic feedback patterns per state |
+| `WAKE_LOCK` | Keep CPU awake during emergency trigger |
+| `RECEIVE_BOOT_COMPLETED` | Auto-start fall detection on boot |
+| `POST_NOTIFICATIONS` | Notification channel alerts (API 33+) |
+| `USE_FULL_SCREEN_INTENT` | Full-screen emergency alert on lock screen |
+| `INTERNET` | WebView map on location confirmation page |
+
+## Accessibility
+
+The app is designed with accessibility as a core principle, not an afterthought:
 
-## Team Ownership and TODO Map
+### Multimodal Interaction (5 modalities)
 
-### Member 1 - Frontend & UI Logic
+| Modality | Implementation |
+|---|---|
+| **Accelerometer (sensor)** | Fall detection + tremor detection -- no user action needed |
+| **Touch (motor)** | 100-120dp buttons, full-width, per-state color coding |
+| **Voice Input (audio)** | SpeechRecognizer keyword matching per state (e.g. "help", "fire", "confirm") |
+| **Voice Output (audio)** | TextToSpeech reads every state change and all available options aloud |
+| **Haptics (tactile)** | Distinct VibrationEffect patterns per state (rapid pulse for countdown, single shot for selection, etc.) |
 
-Files:
+### Screen Reader Support (TalkBack)
 
-- `MainActivity.kt`
-- `activity_main.xml`
+- All interactive elements have `contentDescription` attributes in XML layouts.
+- Dynamic buttons update `contentDescription` programmatically in `renderState()` as their labels change per state (e.g. "I need help. Double tap to request emergency services now." during countdown).
+- Decorative elements (emoji icons, status indicators) use `importantForAccessibility="no"` to avoid cluttering the screen reader.
 
-Responsibilities:
+### Adaptive Communication
 
-- Keep UI state rendering aligned to `EmergencyUiState`.
-- Maintain accessibility-first controls (large 100dp+ buttons).
-- Finalize countdown and input trigger behavior.
+Users choose their preferred interaction mode during onboarding:
+- **Touch** -- buttons only, no voice activation
+- **Voice** -- full STT keyword recognition + TTS announcements
+- **Both** -- all modalities active simultaneously
 
-Key TODO markers:
+The app respects this preference at runtime; STT is only activated when the user's profile includes voice mode.
 
-- Implement robust 10-second countdown behavior.
-- Harden `onKeyDown` handling for volume-based emergency triggers.
+### Motor Accessibility
 
-### Member 2 - Sensor Backend
+- Minimum button height: 100dp (primary), 88dp (secondary), 72dp (cancel) -- well above the 48dp WCAG minimum
+- Full-width buttons (`match_parent`) -- no precision targeting required
+- Volume keys as alternative emergency trigger -- no touch required at all
+- Auto-escalation: if the user does not respond during countdown, emergency services are contacted automatically
 
-File:
+## Tech Stack
 
-- `FallDetectionService.kt`
+- **Language**: Kotlin
+- **Min SDK**: 26 (Android 8.0)
+- **Target SDK**: 34 (Android 14)
+- **UI**: Material Design 3 (Material Components)
+- **Architecture**: MVVM with StateFlow
+- **Location**: Google Play Services FusedLocationProviderClient
+- **Voice**: Android platform SpeechRecognizer + TextToSpeech
+- **SMS**: Android SmsManager
+- **Storage**: SharedPreferences
 
-Responsibilities:
+## SMS Format (SCDF Guidelines)
 
-- Process accelerometer data in background service.
-- Detect free-fall + impact sequence reliably.
-- Trigger emergency flow via broadcast/event.
+The app formats SMS per [SCDF Emergency SMS guidelines](https://www.scdf.gov.sg/home/about-scdf/emergency-medical-services):
 
-Key TODO markers:
+- **Fire**: `Fire Engine. Blk 889 Tampines St 81, #05-123. {Name}'s unit is on fire.`
+- **Ambulance**: `Ambulance. Blk 889 Tampines St 81, #05-123. {Name} has fallen and needs help.`
 
-- Improve high-pass filtering and threshold strategy.
-- Replace placeholder trigger logic with multi-step fall detection.
-
-### Member 3 - Voice/Vision Backend
-
-File:
-
-- `InteractionManager.kt`
-
-Responsibilities:
-
-- TTS announcements for state changes.
-- STT keyword recognition (`Fire`, `Ambulance`, `Police`, `Yes`, `No`).
-- Camera motion fallback as "I am okay" signal.
-
-Key TODO markers:
-
-- Integrate `SpeechRecognizer` flow and callbacks.
-- Add CameraX frame processing placeholder pipeline.
-
-### Member 4 - Geo/Data Backend
-
-File:
-
-- `LocationHandler.kt`
-
-Responsibilities:
-
-- High-accuracy location retrieval via `FusedLocationProviderClient`.
-- Singapore-focused reverse geocoding.
-- User profile persistence (unit number + medical ID).
-
-Key TODO markers:
-
-- Refine address formatting for Singapore landmarks/blocks.
-- Decide SharedPrefs vs Room for persistent profile.
-
-### Member 5 - Integration & SMS
-
-File:
-
-- `DispatchBridge.kt`
-
-Responsibilities:
-
-- Build SCDF `70995` message formatter.
-- Dispatch formatted SMS to SCDF and caregiver.
-- Improve delivery/error handling.
-
-Key TODO markers:
-
-- Finalize formatter: `"[Service]. [Address], #[Unit]. [Context]."`
-- Add robust result reporting and retries where needed.
-
-## Local Setup (Native Android)
-
-Current repo has source skeleton only. To run, place this code inside a full Android project module.
-
-### Minimum expected Android stack
-
-- Android Studio (latest stable)
-- Kotlin (latest stable plugin)
-- minSdk around 26+ recommended
-- Target package: `com.example.emergencyresponse`
-
-### Required dependencies
-
-Add to your app module as needed:
-
-- AndroidX lifecycle + ViewModel + coroutines
-- Google Play Services Location (`play-services-location`)
-- CameraX (for motion placeholder work)
-- Speech/voice APIs (platform `SpeechRecognizer`, `TextToSpeech`)
-
-### Required manifest permissions
-
-Declare and request runtime permissions:
-
-- `android.permission.ACCESS_FINE_LOCATION`
-- `android.permission.SEND_SMS`
-- `android.permission.RECORD_AUDIO`
-- `android.permission.CAMERA`
-
-Optional depending on implementation details:
-
-- `android.permission.BODY_SENSORS`
-- `android.permission.FOREGROUND_SERVICE`
-
-Also register `FallDetectionService` in `AndroidManifest.xml`.
-
-## Integration Contract Between Modules
-
-Use this contract to avoid coupling:
-
-- UI updates and state transitions must be initiated via `EmergencyViewModel`.
-- Module outputs should map to `EmergencyEvent` fields:
-  - `source`
-  - `state`
-  - `service`
-  - `context`
-  - `location`
-- Modules should not directly mutate each other's internals.
-
-## Recommended Branch/PR Workflow
-
-1. Each member works in feature branch by ownership area.
-2. Keep PRs small and tied to one module boundary.
-3. Add at least one test/demo scenario per PR.
-4. Confirm state transitions still respect the 6-state flow.
-
-## Manual Test Checklist
-
-### Core flow
-
-- From `IDLE`, trigger via large button.
-- Confirm `DROP_COUNTDOWN` appears.
-- Confirm countdown expiry moves to `SERVICE_SELECTION`.
-- Select service -> context -> location confirm -> dispatch active.
-
-### Alternative triggers
-
-- Trigger from volume up/down key.
-- Trigger from fall-detection broadcast:
-  - `adb shell am broadcast -a com.example.emergencyresponse.ACTION_FALL_DETECTED`
-
-### Module sanity checks
-
-- TTS announces every state transition.
-- Location resolves and displays a usable address.
-- Dispatch builds correctly formatted message.
-- SMS attempts target SCDF and caregiver destination numbers.
-
-## Known Skeleton Limitations
-
-- This is a scaffold, not production-ready fall detection.
-- STT and camera motion logic are placeholders.
-- SMS/location permissions and edge cases still need full handling.
-- Manifest/Gradle project shell may need completion depending on host project.
-
-## Next Implementation Milestones
-
-1. Extract `EmergencyViewModel`, `EmergencyEvent`, and state enum into dedicated files for cleaner module sharing.
-2. Add unit tests for state transitions and message formatting.
-3. Add instrumentation tests for lifecycle and permission flows.
-4. Introduce dependency injection (for testability and clear boundaries).
+Caregiver SMS includes the SCDF message plus a Google Maps location link.
