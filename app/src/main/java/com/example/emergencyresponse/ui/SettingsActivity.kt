@@ -1,5 +1,6 @@
 package com.example.emergencyresponse.ui
 
+import android.content.Intent
 import android.os.Bundle
 import android.widget.RadioGroup
 import android.widget.Toast
@@ -24,6 +25,7 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var settingsCaregiver: TextInputEditText
     private lateinit var settingsSecondary: TextInputEditText
     private lateinit var settingsMedical: TextInputEditText
+    private lateinit var settingsAllergies: TextInputEditText
     private lateinit var settingsMedicalId: TextInputEditText
     private lateinit var settingsCommMode: RadioGroup
 
@@ -40,6 +42,7 @@ class SettingsActivity : AppCompatActivity() {
         settingsCaregiver = findViewById(R.id.settingsCaregiver)
         settingsSecondary = findViewById(R.id.settingsSecondary)
         settingsMedical = findViewById(R.id.settingsMedical)
+        settingsAllergies = findViewById(R.id.settingsAllergies)
         settingsMedicalId = findViewById(R.id.settingsMedicalId)
         settingsCommMode = findViewById(R.id.settingsCommMode)
 
@@ -47,6 +50,9 @@ class SettingsActivity : AppCompatActivity() {
 
         findViewById<MaterialButton>(R.id.btnSave).setOnClickListener { saveAndClose() }
         findViewById<MaterialButton>(R.id.btnClose).setOnClickListener { finish() }
+        findViewById<MaterialButton>(R.id.btnMedicalCard).setOnClickListener {
+            startActivity(Intent(this, MedicalCardActivity::class.java))
+        }
     }
 
     private fun loadProfile() {
@@ -58,6 +64,7 @@ class SettingsActivity : AppCompatActivity() {
         settingsCaregiver.setText(p.caregiverNumber)
         settingsSecondary.setText(p.secondaryContact)
         settingsMedical.setText(p.medicalConditions)
+        settingsAllergies.setText(p.allergies)
         settingsMedicalId.setText(p.medicalId)
         when (p.communicationMode) {
             UserProfile.COMM_MODE_VOICE -> settingsCommMode.check(R.id.settingsRadioVoice)
@@ -80,6 +87,7 @@ class SettingsActivity : AppCompatActivity() {
             caregiverNumber = settingsCaregiver.text?.toString()?.trim() ?: "",
             secondaryContact = settingsSecondary.text?.toString()?.trim() ?: "",
             medicalConditions = settingsMedical.text?.toString()?.trim() ?: "",
+            allergies = settingsAllergies.text?.toString()?.trim() ?: "",
             medicalId = settingsMedicalId.text?.toString()?.trim() ?: "",
             communicationMode = commMode
         )

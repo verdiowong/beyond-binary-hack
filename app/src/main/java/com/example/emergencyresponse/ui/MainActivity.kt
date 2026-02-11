@@ -14,6 +14,9 @@ import android.os.Bundle
 import android.os.CountDownTimer
 import android.os.PowerManager
 import android.provider.Settings
+import android.media.AudioManager
+import android.speech.tts.TextToSpeech
+import android.speech.tts.UtteranceProgressListener
 import android.util.Log
 import android.view.KeyEvent
 import android.view.View
@@ -64,6 +67,13 @@ class MainActivity : AppCompatActivity() {
     private lateinit var cancelButton: Button
     private lateinit var mapWebView: WebView
     private lateinit var flexSpacer: View
+    private lateinit var shoutButton: Button
+
+    // Shout-for-help state
+    private var isShouting = false
+    private var shoutTts: TextToSpeech? = null
+    private val shoutHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private var savedShoutVolume = -1
 
     /** Context options for the currently selected service (set during SERVICE_SELECTION). */
     private var activeContextOptions: List<ContextOption> = emptyList()
@@ -126,11 +136,16 @@ class MainActivity : AppCompatActivity() {
         cancelButton = findViewById(R.id.cancelButton)
         mapWebView = findViewById(R.id.mapWebView)
         flexSpacer = findViewById(R.id.flexSpacer)
+        shoutButton = findViewById(R.id.shoutButton)
 
         // Configure WebView for Google Maps embed
         mapWebView.settings.javaScriptEnabled = true
         mapWebView.settings.domStorageEnabled = true
         mapWebView.webViewClient = WebViewClient() // prevent external browser opens
+
+        // Shout button: toggle loud TTS help message
+        initShoutTts()
+        shoutButton.setOnClickListener { toggleShout() }
 
         interactionManager = InteractionManager(this).also { it.initialize() }
         locationHandler = LocationHandler(this)
@@ -333,6 +348,7 @@ class MainActivity : AppCompatActivity() {
                 val enrichedContext = buildList {
                     add(baseEvent.context)
                     if (profile.medicalConditions.isNotBlank()) add("Medical: ${profile.medicalConditions}")
+                    if (profile.allergies.isNotBlank()) add("Allergies: ${profile.allergies}")
                     if (profile.medicalId.isNotBlank()) add("ID: ${profile.medicalId}")
                 }.filter { it.isNotBlank() }.joinToString(". ")
 
@@ -361,6 +377,7 @@ class MainActivity : AppCompatActivity() {
         when (model.state) {
             EmergencyUiState.IDLE -> {
                 cancelTimer()
+                stopShouting()
                 hideAllOptionButtons()
                 titleText.text = "Ready"
                 subtitleText.text = "Press and hold a large button or volume key to trigger emergency flow."
@@ -450,12 +467,21 @@ class MainActivity : AppCompatActivity() {
 
             EmergencyUiState.DISPATCH_ACTIVE -> {
                 cancelTimer()
+                stopShouting()
                 hideAllOptionButtons()
                 titleText.text = "\u2705  Dispatch Active"
                 subtitleText.text = "Emergency notification has been sent."
                 primaryActionButton.text = "Done \u2014 Return to Idle"
                 primaryActionButton.contentDescription = "Emergency dispatched. Double tap to return to idle."
                 primaryActionButton.visibility = View.VISIBLE
+                // Show Medical Card button so user can display info to arriving responders
+                secondaryActionButton.text = "\u2695\uFE0F  Show Medical Card"
+                secondaryActionButton.contentDescription = "Show your medical card to first responders"
+                secondaryActionButton.visibility = View.VISIBLE
+                secondaryActionButton.backgroundTintList = ColorStateList.valueOf(getColor(R.color.primary))
+                secondaryActionButton.setOnClickListener {
+                    startActivity(Intent(this, MedicalCardActivity::class.java))
+                }
                 cancelButton.visibility = View.GONE
             }
         }
@@ -609,6 +635,79 @@ class MainActivity : AppCompatActivity() {
         mapWebView.tag = null
     }
 
+    // ═══════════════════════════════════════════════════════════════════════
+    // Shout for Help — loud repeated TTS via a dedicated TextToSpeech instance
+    // so it doesn't conflict with the InteractionManager's TTS.
+    // ═══════════════════════════════════════════════════════════════════════
+
+    private fun initShoutTts() {
+        shoutTts = TextToSpeech(this) { status ->
+            if (status == TextToSpeech.SUCCESS) {
+                shoutTts?.language = java.util.Locale.US
+                shoutTts?.setSpeechRate(1.1f)
+                shoutTts?.setPitch(1.2f)
+            }
+        }
+    }
+
+    private fun toggleShout() {
+        if (isShouting) {
+            stopShouting()
+        } else {
+            startShouting()
+        }
+    }
+
+    private fun startShouting() {
+        isShouting = true
+        shoutButton.text = "\uD83D\uDD07  Stop Shouting"
+        shoutButton.contentDescription = "Stop shouting for help"
+
+        // Max out media volume
+        val audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        savedShoutVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
+        val maxVol = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+        audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, maxVol, 0)
+
+        shoutOnce()
+    }
+
+    private val shoutMessage = "Help! Help! I need help! Please help me! Emergency! Help!"
+
+    private fun shoutOnce() {
+        if (!isShouting) return
+        val params = Bundle().apply {
+            putInt(TextToSpeech.Engine.KEY_PARAM_STREAM, AudioManager.STREAM_MUSIC)
+        }
+        shoutTts?.speak(shoutMessage, TextToSpeech.QUEUE_FLUSH, params, "shout_help")
+        shoutTts?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
+            override fun onStart(utteranceId: String?) {}
+            override fun onDone(utteranceId: String?) {
+                // Repeat after a short pause
+                shoutHandler.postDelayed({ shoutOnce() }, 800)
+            }
+            @Deprecated("Deprecated in Java")
+            override fun onError(utteranceId: String?) {
+                shoutHandler.postDelayed({ shoutOnce() }, 1500)
+            }
+        })
+    }
+
+    private fun stopShouting() {
+        isShouting = false
+        shoutTts?.stop()
+        shoutHandler.removeCallbacksAndMessages(null)
+        shoutButton.text = "\uD83D\uDD0A  Shout for Help"
+        shoutButton.contentDescription = "Shout for help through the speaker to attract nearby people"
+
+        // Restore volume
+        if (savedShoutVolume >= 0) {
+            val audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+            audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, savedShoutVolume, 0)
+            savedShoutVolume = -1
+        }
+    }
+
     private fun startCountdownIfNeeded() {
         if (countdownTimer != null) return
 
@@ -643,6 +742,9 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         countdownTimer?.cancel()
+        stopShouting()
+        shoutTts?.shutdown()
+        shoutTts = null
         locationHandler.stopLocationUpdates()
         interactionManager.release()
         if (isFallReceiverRegistered) {
